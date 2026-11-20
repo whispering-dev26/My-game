@@ -1,0 +1,49 @@
+name: Build Android App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Project
+        run: |
+          mkdir -p www
+          cat << 'EOF' > package.json
+          {"name":"my-game","version":"1.0.0","dependencies":{"@capacitor/core":"^6.0.0","@capacitor/cli":"^6.0.0","@capacitor/android":"^6.0.0","@capacitor-community/admob":"^6.0.0"}}
+          EOF
+          cat << 'EOF' > www/index.html
+          <!DOCTYPE html><html lang="uz"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>Sehrli Birlashtirish</title><style>*{box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}body{margin:0;font-family:sans-serif;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:15px}.stats{display:flex;justify-content:space-around;width:100%;max-width:360px;background:rgba(255,255,255,.15);padding:10px;border-radius:12px;margin-bottom:12px;font-weight:700}#message{min-height:24px;margin-bottom:12px;text-align:center;color:#ffeaa7}.board{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:360px;background:rgba(0,0,0,.25);padding:10px;border-radius:16px}.cell{aspect-ratio:1;background:rgba(255,255,255,.12);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:32px}.cell.selected{background:#f1c40f;transform:scale(1.08)}.controls{display:flex;gap:10px;margin-top:16px;width:100%;max-width:360px}button{flex:1;padding:12px 8px;border:none;border-radius:10px;font-weight:700;color:#fff}.btn-shuffle{background:#e67e22}.btn-power{background:#9b59b6}.btn-new{background:#e74c3c}</style></head><body><div class="stats"><div>⭐ <span id="level">1</span></div><div>🏆 <span id="score">0</span></div><div>🪙 <span id="coins">20</span></div></div><div id="message">🌲 Bir xil buyumlarni birlashtiring!</div><div class="board" id="board"></div><div class="controls"><button class="btn-shuffle" onclick="shuffle()">🔀 Aralashtir</button><button class="btn-power" onclick="usePower()">✨ Sehr (10🪙)</button><button class="btn-new" onclick="newGame()">🔄 Yangi</button></div><script>const AD_ID='ca-app-pub-1275271216332471/2280941065';async function initAd(){try{if(window.Capacitor?.Plugins?.AdMob){const{AdMob}=window.Capacitor.Plugins;await AdMob.initialize();await AdMob.prepareInterstitial({adId:AD_ID,isTesting:false})}}catch(e){}}async function showAd(){try{if(window.Capacitor?.Plugins?.AdMob){const{AdMob}=window.Capacitor.Plugins;await AdMob.showInterstitial();await AdMob.prepareInterstitial({adId:AD_ID,isTesting:false})}}catch(e){}}document.addEventListener('DOMContentLoaded',initAd);const items=["🌱","🌿","🍀","🌸","🍎","💎","👑","🔥"];let board=[],selected=null,score=+localStorage.getItem("mg_s")||0,coins=localStorage.getItem("mg_c")!==null?+localStorage.getItem("mg_c"):20,level=+localStorage.getItem("mg_l")||1;function save(){localStorage.setItem("mg_s",score);localStorage.setItem("mg_c",coins);localStorage.setItem("mg_l",level)}function createBoard(){board=Array.from({length:25},()=>Math.floor(Math.random()*3));render()}function render(){document.getElementById("level").textContent=level;document.getElementById("score").textContent=score;document.getElementById("coins").textContent=coins;const b=document.getElementById("board");b.innerHTML="";board.forEach((v,i)=>{const c=document.createElement("div");c.className="cell"+(selected===i?" selected":"");c.textContent=items[v];c.onclick=()=>selectCell(i);b.appendChild(c)})}function selectCell(i){if(selected===null){selected=i;render();return}if(selected===i){selected=null;render();return}const a=selected,b=i;selected=null;if(Math.abs(Math.floor(a/5)-Math.floor(b/5))+Math.abs(a%5-b%5)!==1){render();return}if(board[a]===board[b]){board[b]=Math.min(board[b]+1,items.length-1);board[a]=Math.floor(Math.random()*3);score+=10*(board[b]+1);coins+=2;document.getElementById("message").textContent="✨ Ajoyib! Buyumlar birlashdi!";if(score>=level*100){level++;document.getElementById("message").textContent="🌟 Yangi bosqich ochildi!";showAd()}save()}else{document.getElementById("message").textContent="Bir xil buyumlarni tanlang!"}render()}function shuffle(){board.sort(()=>Math.random()-.5);selected=null;document.getElementById("message").textContent="🔀 Aralashtirildi!";render()}function usePower(){let c={};board.forEach(v=>c[v]=(c[v]||0)+1);let best=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];if(coins<10){document.getElementById("message").textContent="Coin yetarli emas!";return}coins-=10;let idx=[];board.forEach((v,i)=>{if(v==best)idx.push(i)});if(idx.length>=2){board[idx[0]]=Math.min(+best+1,items.length-1);idx.slice(1).forEach(i=>board[i]=Math.floor(Math.random()*3));score+=20;document.getElementById("message").textContent="✨ Sehr ishlatildi!"}else{coins+=10;document.getElementById("message").textContent="Buyumlar yetarli emas."}save();render()}function newGame(){if(!confirm("Yangi o‘yin?"))return;showAd();level=1;score=0;coins=20;selected=null;save();createBoard();document.getElementById("message").textContent="🌲 Yangi sarguzasht!"}createBoard();</script></body></html>
+          EOF
+
+      - name: Build Android APK
+        run: |
+          npm install
+          npx cap init "Sehrli Birlashtirish" "com.whispering.mygame" --web-dir=www
+          npx cap add android
+          npx cap sync
+          sed -i 's/<\/application>/<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1275271216332471~8126283781"\/><\/application>/g' android/app/src/main/AndroidManifest.xml
+          cd android && chmod +x gradlew && ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mening-Oyinim-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
