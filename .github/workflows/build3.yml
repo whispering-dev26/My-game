@@ -1,0 +1,130 @@
+name: Build APK and AAB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Create Game
+        run: |
+          mkdir -p www
+          cat << 'EOF' > package.json
+          {
+            "name": "my-game",
+            "version": "1.0.1",
+            "dependencies": {
+              "@capacitor/core": "^6.0.0",
+              "@capacitor/cli": "^6.0.0",
+              "@capacitor/android": "^6.0.0",
+              "@capacitor-community/admob": "^6.0.0"
+            }
+          }
+          EOF
+          cat << 'EOF' > www/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+          <title>Magic Merge</title>
+          <style>
+          *{box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+          body{margin:0;font-family:sans-serif;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:15px}
+          .stats{display:flex;justify-content:space-around;width:100%;max-width:360px;background:rgba(255,255,255,.15);padding:10px;border-radius:12px;margin-bottom:12px;font-weight:700}
+          #message{min-height:24px;margin-bottom:12px;text-align:center;color:#ffeaa7}
+          .board{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:360px;background:rgba(0,0,0,.25);padding:10px;border-radius:16px}
+          .cell{aspect-ratio:1;background:rgba(255,255,255,.12);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:32px}
+          .cell.selected{background:#f1c40f;transform:scale(1.08)}
+          .controls{display:flex;gap:10px;margin-top:16px;width:100%;max-width:360px}
+          button{flex:1;padding:12px 8px;border:none;border-radius:10px;font-weight:700;color:#fff}
+          .btn-shuffle{background:#e67e22}
+          .btn-power{background:#9b59b6}
+          .btn-new{background:#e74c3c}
+          </style>
+          </head>
+          <body>
+          <div class="stats"><div>⭐ <span id="level">1</span></div><div>🏆 <span id="score">0</span></div><div>🪙 <span id="coins">20</span></div></div>
+          <div id="message">🌲 Match identical items!</div>
+          <div class="board" id="board"></div>
+          <div class="controls">
+          <button class="btn-shuffle" id="btnShuffle" onclick="shuffle()">🔀 Shuffle</button>
+          <button class="btn-power" id="btnPower" onclick="usePower()">✨ Magic (10🪙)</button>
+          <button class="btn-new" id="btnNew" onclick="newGame()">🔄 New</button>
+          </div>
+          <script>
+          const isUz=(navigator.language||'').toLowerCase().startsWith('uz');
+          const T={
+            start:isUz?"🌲 Bir xil buyumlarni birlashtiring!":"🌲 Match identical items!",
+            shuffleBtn:isUz?"🔀 Aralashtir":"🔀 Shuffle",
+            powerBtn:isUz?"✨ Sehr (10🪙)":"✨ Magic (10🪙)",
+            newBtn:isUz?"🔄 Yangi":"🔄 New",
+            bonus:isUz?"🎉 Ajoyib! +5 tanga!":"🎉 Awesome! +5 coins!",
+            merged:isUz?"✨ Birlashtirildi!":"✨ Merged!",
+            lvlUp:isUz?"⭐ Yangi daraja: ":"⭐ Level up: ",
+            sameOnly:isUz?"❌ Faqat bir xil buyumlarni tanlang!":"❌ Select identical items only!",
+            shuffled:isUz?"🔀 Aralashtirildi!":"🔀 Shuffled!",
+            noCoin5:isUz?"🪙 Tanga yetarli emas (5🪙 kerak)!":"🪙 Not enough coins (5🪙 needed)!",
+            magicUsed:isUz?"✨ Sehr ishlatildi!":"✨ Magic used!",
+            noCoin10:isUz?"🪙 Tanga yetarli emas (10🪙 kerak)!":"🪙 Not enough coins (10🪙 needed)!"
+          };
+          document.getElementById("message").textContent=T.start;
+          document.getElementById("btnShuffle").textContent=T.shuffleBtn;
+          document.getElementById("btnPower").textContent=T.powerBtn;
+          document.getElementById("btnNew").textContent=T.newBtn;
+
+          const AD_ID='ca-app-pub-1275271216332471/2280941065';
+          async function initAd(){try{if(window.Capacitor?.Plugins?.AdMob){const{AdMob}=window.Capacitor.Plugins;await AdMob.initialize();await AdMob.prepareInterstitial({adId:AD_ID,isTesting:false})}}catch(e){}}
+          async function showAd(){try{if(window.Capacitor?.Plugins?.AdMob){const{AdMob}=window.Capacitor.Plugins;await AdMob.showInterstitial();await AdMob.prepareInterstitial({adId:AD_ID,isTesting:false})}}catch(e){}}
+          document.addEventListener('DOMContentLoaded',initAd);
+          const items=["🌱","🌿","🍀","🌸","🍎","💎","👑","🔥"];
+          let board=[],selected=null,score=+localStorage.getItem("mg_s")||0,coins=localStorage.getItem("mg_c")!==null?+localStorage.getItem("mg_c"):20,level=+localStorage.getItem("mg_l")||1;
+          function save(){localStorage.setItem("mg_s",score);localStorage.setItem("mg_c",coins);localStorage.setItem("mg_l",level)}
+          function createBoard(){board=Array.from({length:25},()=>Math.floor(Math.random()*3));render()}
+          function render(){document.getElementById("level").textContent=level;document.getElementById("score").textContent=score;document.getElementById("coins").textContent=coins;const b=document.getElementById("board");b.innerHTML="";board.forEach((v,i)=>{const c=document.createElement("div");c.className="cell"+(selected===i?" selected":"");c.textContent=items[v];c.onclick=()=>selectCell(i);b.appendChild(c)})}
+          function selectCell(i){if(selected===null){selected=i}else if(selected===i){selected=null}else{if(board[selected]===board[i]){const nv=Math.min(board[i]+1,items.length-1);board[i]=nv;board[selected]=Math.floor(Math.random()*3);score+=(nv+1)*10;if(nv>=4){coins+=5;document.getElementById("message").textContent=T.bonus}else{document.getElementById("message").textContent=T.merged}if(score>=level*200){level++;coins+=10;document.getElementById("message").textContent=T.lvlUp+level;showAd()}save()}else{document.getElementById("message").textContent=T.sameOnly}selected=null}render()}
+          function shuffle(){if(coins>=5){coins-=5;board.sort(()=>Math.random()-0.5);selected=null;save();render();document.getElementById("message").textContent=T.shuffled}else{document.getElementById("message").textContent=T.noCoin5}}
+          function usePower(){if(coins>=10){coins-=10;const i=Math.floor(Math.random()*25);board[i]=Math.min(board[i]+1,items.length-1);score+=30;save();render();document.getElementById("message").textContent=T.magicUsed}else{document.getElementById("message").textContent=T.noCoin10}}
+          function newGame(){score=0;level=1;coins=20;selected=null;save();createBoard();showAd()}
+          createBoard();
+          </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Build APK and AAB
+        run: |
+          npm install
+          npx cap init "Magic Merge" "com.whispering.mygame" --web-dir=www
+          npx cap add android
+          npx cap sync
+          sed -i 's/<\/application>/<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1275271216332471~8126283781"\/><\/application>/g' android/app/src/main/AndroidManifest.xml
+          keytool -genkey -v -keystore android/app/my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key-alias -storepass 123456 -keypass 123456 -dname "CN=Developer, OU=Dev, O=MyGame, L=Namangan, S=Namangan, C=UZ"
+          cd android && chmod +x gradlew
+          ./gradlew assembleDebug
+          ./gradlew bundleRelease -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/android/app/my-release-key.jks -Pandroid.injected.signing.store.password=123456 -Pandroid.injected.signing.key.alias=my-key-alias -Pandroid.injected.signing.key.password=123456
+
+      - name: Upload Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tayyor-APK-va-AAB
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/my-release-key.jks
