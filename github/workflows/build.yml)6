@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- AdMob App ID ma'lumoti -->
+  <meta name="admob-app-id" content="ca-app-pub-1275271216332471~8126283781">
+  <title>Match-3 Plant Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: linear-gradient(180deg, #1a3a8a 0%, #1e429f 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    .top-bar {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+
+    #languageSelect {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    #languageSelect option {
+      background: #1e3a8a;
+      color: white;
+    }
+
+    .stats-panel {
+      width: 100%;
+      max-width: 380px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-text {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      min-height: 26px;
+      text-align: center;
+    }
+
+    .board {
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 1 / 1;
+      background: rgba(15, 28, 70, 0.65);
+      border-radius: 20px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .cell.selected {
+      background: rgba(255, 255, 255, 0.28);
+      transform: scale(1.08);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+    }
+
+    .controls {
+      width: 100%;
+      max-width: 380px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 8px;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-shuffle { background: #f59e0b; }
+    .btn-magic { background: #8b5cf6; }
+    .btn-new { background: #ef4444; }
+  </style>
+</head>
+<body>
+
+  <!-- 10 ta til menyusi -->
+  <div class="top-bar">
+    <select id="languageSelect" onchange="changeLanguage(this.value)">
+      <option value="uz">🇺🇿 O'zbekcha</option>
+      <option value="ru">🇷🇺 Русский</option>
+      <option value="en">🇺🇸 English</option>
+      <option value="ko">🇰🇷 한국어</option>
+      <option value="tr">🇹🇷 Türkçe</option>
+      <option value="kk">🇰🇿 Қазақша</option>
+      <option value="tg">🇹🇯 Тоҷикӣ</option>
+      <option value="ar">🇸🇦 العربية</option>
+      <option value="zh">🇨🇳 中文</option>
+      <option value="de">🇩🇪 Deutsch</option>
+    </select>
+  </div>
+
+  <!-- Statistika -->
+  <div class="stats-panel">
+    <div class="stat-item">⭐ <span id="level">1</span></div>
+    <div class="stat-item">🏆 <span id="score">0</span></div>
+    <div class="stat-item">🪙 <span id="coins">20</span></div>
+  </div>
+
+  <!-- Holat xabari -->
+  <div class="status-text" id="statusText"></div>
+
+  <!-- O'yin maydoni -->
+  <div class="board" id="board"></div>
+
+  <!-- Pastki tugmalar -->
+  <div class="controls">
+    <button class="btn btn-shuffle" onclick="shuffleBoard()">
+      <span id="btnShuffle">🔀 Aralashtir</span>
+    </button>
+    <button class="btn btn-magic" onclick="useMagic()">
+      <span><span id="btnMagic">✨ Sehr</span> (10🪙)</span>
+    </button>
+    <button class="btn btn-new" onclick="newGame()">
+      <span id="btnNew">🔄 Yangi</span>
+    </button>
+  </div>
+
+  <script>
+    // ADMOB SOZLAMALARI (Sizning ID'laringiz)
+    const ADMOB_CONFIG = {
+      appId: "ca-app-pub-1275271216332471~8126283781",
+      interstitialId: "ca-app-pub-1275271216332471/2280941065"
+    };
+
+    // Android ilova (WebView / Capacitor / Cordova) orqali AdMob reklamasini chaqirish
+    function showAdMobInterstitial(giveBonusCoins = false) {
+      if (window.AndroidAds && typeof window.AndroidAds.showInterstitial === "function") {
+        window.AndroidAds.showInterstitial(ADMOB_CONFIG.interstitialId);
+      } else if (window.admob && window.admob.interstitial) {
+        window.admob.interstitial.show();
+      } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+        window.Capacitor.Plugins.AdMob.showInterstitial();
+      }
+
+      if (giveBonusCoins) {
+        coins += 10;
+        setStatus('bonus_coins');
+        renderBoard();
+      }
+    }
+
+    // 10 TA TIL LUG'ATI
+    const translations = {
+      uz: {
+        ready: "🌱 Uchta bir xil o'simlikni birlashtiring!",
+        matched: "🎉 Ajoyib! +10 ball!",
+        shuffled: "🔀 Doska aralashtirildi!",
+        magic_used: "✨ Sehr ishlatildi!",
+        bonus_coins: "🎬 Reklama uchun +10 tanga berildi!",
+        new_started: "🔄 Yangi o'yin boshlandi!",
+        shuffle: "🔀 Aralashtir",
+        magic: "✨ Sehr",
+        new_game: "🔄 Yangi"
+      },
+      ru: {
+        ready: "🌱 Соберите 3 одинаковых растения!",
+        matched: "🎉 Отлично! +10 очков!",
+        shuffled: "🔀 Поле перемешано!",
+        magic_used: "✨ Магия использована!",
+        bonus_coins: "🎬 +10 монет за рекламу!",
+        new_started: "🔄 Новая игра начата!",
+        shuffle: "🔀 Перемешать",
+        magic: "✨ Магия",
+        new_game: "🔄 Новая"
+      },
+      en: {
+        ready: "🌱 Match 3 identical plants!",
+        matched: "🎉 Great! +10 points!",
+        shuffled: "🔀 Board shuffled!",
+        magic_used: "✨ Magic used!",
+        bonus_coins: "🎬 +10 coins for watching ad!",
+        new_started: "🔄 New game started!",
+        shuffle: "🔀 Shuffle",
+        magic: "✨ Magic",
+        new_game: "🔄 New"
+      },
+      ko: {
+        ready: "🌱 똑같은 식물 3개를 맞추세요!",
+        matched: "🎉 훌륭해요! +10점!",
+        shuffled: "🔀 보드가 섞였습니다!",
+        magic_used: "✨ 마법 사용됨!",
+        bonus_coins: "🎬 광고 보상으로 +10 코인!",
+        new_started: "🔄 새 게임 시작!",
+        shuffle: "🔀 섞기",
+        magic: "✨ 마법",
+        new_game: "🔄 새 게임"
+      },
+      tr: {
+        ready: "🌱 3 aynı bitkiyi eşleştirin!",
+        matched: "🎉 Harika! +10 puan!",
+        shuffled: "🔀 Tahta karıştırıldı!",
+        magic_used: "✨ Sihir kullanıldı!",
+        bonus_coins: "🎬 Reklam için +10 jeton!",
+        new_started: "🔄 Yeni oyun başladı!",
+        shuffle: "🔀 Karıştır",
+        magic: "✨ Sihir",
+        new_game: "🔄 Yeni"
+      },
+      kk: {
+        ready: "🌱 3 бірдей өсімдікті біріктіріңіз!",
+        matched: "🎉 Тамаша! +10 ұпай!",
+        shuffled: "🔀 Тақта араластырылды!",
+        magic_used: "✨ Сиқыр қолданылды!",
+        bonus_coins: "🎬 Жарнама үшін +10 тиын!",
+        new_started: "🔄 Жаңа ойын басталды!",
+        shuffle: "🔀 Араластыру",
+        magic: "✨ Сиқыр",
+        new_game: "🔄 Жаңа"
+      },
+      tg: {
+        ready: "🌱 3 растании якхеларо якҷоя кунед!",
+        matched: "🎉 Олӣ! +10 хол!",
+        shuffled: "🔀 Тахта омехта шуд!",
+        magic_used: "✨ Сеҳр истифода шуд!",
+        bonus_coins: "🎬 Барои реклама +10 танга!",
+        new_started: "🔄 Бозии нав оғоз шуд!",
+        shuffle: "🔀 Омехта кардан",
+        magic: "✨ Сеҳр",
+        new_game: "🔄 Нав"
+      },
+      ar: {
+        ready: "🌱 طابق 3 نباتات متشابهة!",
+        matched: "🎉 رائع! +10 نقاط!",
+        shuffled: "🔀 تم خلط اللوحة!",
+        magic_used: "✨ تم استخدام السحر!",
+        bonus_coins: "🎬 +10 عملات مقابل الإعلان!",
+        new_started: "🔄 بدأت لعبة جديدة!",
+        shuffle: "🔀 خلط",
+        magic: "✨ سحر",
+        new_game: "🔄 جديد"
+      },
+      zh: {
+        ready: "🌱 匹配3个相同的植物！",
+        matched: "🎉 太棒了！+10分！",
+        shuffled: "🔀 棋盘已洗牌！",
+        magic_used: "✨ 已使用魔法！",
+        bonus_coins: "🎬 观看广告获得 +10 金币！",
+        new_started: "🔄 新游戏已开始！",
+        shuffle: "🔀 洗牌",
+        magic: "✨ 魔法",
+        new_game: "🔄 新游戏"
+      },
+      de: {
+        ready: "🌱 Kombiniere 3 gleiche Pflanzen!",
+        matched: "🎉 Super! +10 Punkte!",
+        shuffled: "🔀 Spielfeld gemischt!",
+        magic_used: "✨ Magie benutzt!",
+        bonus_coins: "🎬 +10 Münzen für Werbung!",
+        new_started: "🔄 Neues Spiel gestartet!",
+        shuffle: "🔀 Mischen",
+        magic: "✨ Magie",
+        new_game: "🔄 Neu"
+      }
+    };
+
+    let currentLang = localStorage.getItem('gameLang') || 'uz';
+    let lastStatusKey = 'ready';
+
+    const items = ['🌿', '🌱', '🍀'];
+    const size = 5;
+    let grid = [];
+    let selected = null;
+    let score = 0;
+    let level = 1;
+    let coins = 20;
+
+    function setStatus(key) {
+      lastStatusKey = key;
+      document.getElementById('statusText').innerText = translations[currentLang][key];
+    }
+
+    function changeLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('gameLang', lang);
