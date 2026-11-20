@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="admob-app-id" content="ca-app-pub-1275271216332471~8126283781">
+  <title>Match-3 Plant Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: linear-gradient(180deg, #1a3a8a 0%, #1e429f 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    /* Tepa panel: Bitta tugmada Saqlash + 10 ta til */
+    .top-bar {
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+
+    .btn-save {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 9px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .btn-save:active {
+      transform: scale(0.95);
+    }
+
+    #languageSelect {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #languageSelect option {
+      background: #1e3a8a;
+      color: white;
+    }
+
+    /* Statistika paneli: Daraja, Ball, Tanga va 3 ta Spichka */
+    .stats-panel {
+      width: 100%;
+      max-width: 380px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 14px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-text {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      min-height: 24px;
+      text-align: center;
+    }
+
+    /* 5x5 O'yin maydoni */
+    .board {
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 1 / 1;
+      background: rgba(15, 28, 70, 0.65);
+      border-radius: 20px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .cell {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .cell.selected {
+      background: rgba(255, 255, 255, 0.28);
+      transform: scale(1.08);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Pastki boshqaruv tugmalari */
+    .controls {
+      width: 100%;
+      max-width: 380px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 8px;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-shuffle { background: #f59e0b; }
+    .btn-magic { background: #8b5cf6; }
+    .btn-new { background: #ef4444; }
+
+    /* 3 ta spichka tugaganda chiqadigan oyna */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+    }
+
+    .modal-box {
+      background: #1e3a8a;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 22px;
+      padding: 24px;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .modal-box h2 {
+      margin-bottom: 12px;
+      font-size: 22px;
+    }
+
+    .modal-box p {
+      margin-bottom: 20px;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .modal-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .btn-ad { background: #10b981; }
+    .btn-restart { background: #ef4444; }
+  </style>
+</head>
+<body>
+
+  <!-- Tepa panel: Bitta tugmada Saqlash + 10 ta til -->
+  <div class="top-bar">
+    <button class="btn-save" onclick="saveAllProgress(true)">
+      <span id="btnSave">💾 Saqlash</span>
+    </button>
+
+    <select id="languageSelect" onchange="changeLanguage(this.value)">
+      <option value="uz">🇺🇿 O'zbekcha</option>
+      <option value="ru">🇷🇺 Русский</option>
+      <option value="en">🇺🇸 English</option>
+      <option value="ko">🇰🇷 한국어</option>
+      <option value="tr">🇹🇷 Türkçe</option>
+      <option value="kk">🇰🇿 Қазақша</option>
+      <option value="tg">🇹🇯 Тоҷикӣ</option>
+      <option value="ar">🇸🇦 العربية</option>
+      <option value="zh">🇨🇳 中文</option>
+      <option value="de">🇩🇪 Deutsch</option>
+    </select>
+  </div>
+
+  <!-- Statistika: Daraja, Ball, Tanga, 3 ta Spichka -->
+  <div class="stats-panel">
+    <div class="stat-item">⭐ <span id="level">1</span></div>
+    <div class="stat-item">🏆 <span id="score">0</span></div>
+    <div class="stat-item">🪙 <span id="coins">20</span></div>
+    <div class="stat-item"><span id="lives">🔥3</span></div>
+  </div>
+
+  <!-- Holat xabari -->
+  <div class="status-text" id="statusText"></div>
+
+  <!-- 5x5 O'yin maydoni -->
+  <div class="board" id="board"></div>
+
+  <!-- Pastki tugmalar -->
+  <div class="controls">
+    <button class="btn btn-shuffle" onclick="shuffleBoard()">
+      <span id="btnShuffle">🔀 Aralashtir</span>
+    </button>
+    <button class="btn btn-magic" onclick="useMagic()">
+      <span><span id="btnMagic">✨ Sehr</span> (10🪙)</span>
+    </button>
+    <button class="btn btn-new" onclick="newGame()">
+      <span id="btnNew">🔄 Yangi</span>
+    </button>
+  </div>
+
+  <!-- 3 ta spichka tugaganda chiqadigan oyna -->
+  <div class="modal" id="gameOverModal">
+    <div class="modal-box">
+      <h2 id="overTitle">🔥 3 ta spichka tugadi!</h2>
+      <p id="overDesc">Davom etish uchun reklama ko'ring yoki yangi o'yin boshlang.</p>
+      <button class="modal-btn btn-ad" onclick="watchAdForLives()">
+        <span id="btnWatchAd">🎬 Reklama (+3 🔥)</span>
+      </button>
+      <button class="modal-btn btn-restart" onclick="newGame()">
+        <span id="btnRestart">🔄 Qaytadan boshlash</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ADMOB SOZLAMALARI (Sizning ID'laringiz)
+    const ADMOB_CONFIG = {
+      appId: "ca-app-pub-1275271216332471~8126283781",
+      interstitialId: "ca-app-pub-1275271216332471/2280941065"
+    };
+
+    function showAdMobInterstitial() {
+      try {
+        if (window.AndroidAds && typeof window.AndroidAds.showInterstitial === "function") {
+          window.AndroidAds.showInterstitial(ADMOB_CONFIG.interstitialId);
+        } else if (window.admob && window.admob.interstitial) {
+          window.admob.interstitial.show();
+        } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+          window.Capacitor.Plugins.AdMob.showInterstitial();
+        }
+      } catch (e) {}
+    }
+
+    // 10 TA TIL LUG'ATI
+    const translations = {
+      uz: {
+        ready: "🌱 Uchta bir xil o'simlikni birlashtiring!",
+        matched: "🎉 Ajoyib! +10 ball!",
+        missed: "❌ Mos kelmadi! -1 🔥 spichka",
+        shuffled: "🔀 Doska aralashtirildi!",
+        magic_used: "✨ Sehr ishlatildi!",
+        bonus_coins: "🎬 Reklama uchun +10 tanga!",
+        new_started: "🔄 Yangi o'yin (3 ta 🔥 spichka)!",
+        saved: "✅ Hammasi saqlandi!",
+        save_btn: "💾 Saqlash",
+        shuffle: "🔀 Aralashtir",
+        magic: "✨ Sehr",
+        new_game: "🔄 Yangi",
+        over_title: "🔥 3 ta spichka tugadi!",
+        over_desc: "Davom etish uchun reklama ko'ring yoki yangi o'yin boshlang.",
+        watch_ad: "🎬 Reklama (+3 🔥)",
+        restart: "🔄 Qaytadan boshlash"
+      },
+      ru: {
+        ready: "🌱 Соберите 3 одинаковых растения!",
+        matched: "🎉 Отлично! +10 очков!",
+        missed: "❌ Не совпало! -1 🔥 спичка",
+        shuffled: "🔀 Поле перемешано!",
+        magic_used: "✨ Магия использована!",
+        bonus_coins: "🎬 +10 монет за рекламу!",
+        new_started: "🔄 Новая игра (3 🔥 спички)!",
+        saved: "✅ Всё сохранено!",
+        save_btn: "💾 Сохранить",
+        shuffle: "🔀 Перемешать",
+        magic: "✨ Магия",
+        new_game: "🔄 Новая",
+        over_title: "🔥 3 спички закончились!",
+        over_desc: "Посмотрите рекламу чтобы продолжить или начните заново.",
+        watch_ad: "🎬 Реклама (+3 🔥)",
+        restart: "🔄 Начать заново"
+      },
+      en: {
+        ready: "🌱 Match 3 identical plants!",
+        matched: "🎉 Great! +10 points!",
+        missed: "❌ No match! -1 🔥 matchstick",
+        shuffled: "🔀 Board shuffled!",
+        magic_used: "✨ Magic used!",
+        bonus_coins: "🎬 +10 coins for watching ad!",
+        new_started: "🔄 New game (3 🔥 matchsticks)!",
+        saved: "✅ All progress saved!",
+        save_btn: "💾 Save",
+        shuffle: "🔀 Shuffle",
+        magic: "✨ Magic",
+        new_game: "🔄 New",
+        over_title: "🔥 Out of 3 matchsticks!",
+        over_desc: "Watch an ad to get +3 matchsticks or restart.",
+        watch_ad: "🎬 Watch Ad (+3 🔥)",
+        restart: "🔄 Restart Game"
+      },
