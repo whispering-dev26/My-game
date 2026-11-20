@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- AdMob Ma'lumotlari -->
+  <meta name="admob-app-id" content="ca-app-pub-1275271216332471~8126283781">
+  <meta name="admob-interstitial-id" content="ca-app-pub-1275271216332471/2280941065">
+  <title>Match-3 Plant Game</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background-color: #204080;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 100vh;
+      padding: 15px;
+    }
+    .lang-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .lang-btn {
+      background: #172e5c;
+      color: #fff;
+      border: 2px solid #3a62b5;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .lang-btn.active {
+      background: #f39c12;
+      border-color: #f39c12;
+    }
+    .stats-bar {
+      background: #2b5099;
+      width: 100%;
+      max-width: 360px;
+      padding: 12px 20px;
+      border-radius: 16px;
+      display: flex;
+      justify-content: space-around;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+    .status-text {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 12px 0;
+      min-height: 28px;
+      text-align: center;
+    }
+    .board {
+      background: #1a356b;
+      padding: 10px;
+      border-radius: 16px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 1 / 1;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    }
+    .cell {
+      background: #2a4d91;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+    }
+    .cell.selected {
+      background: #4674cf;
+      transform: scale(1.08);
+      box-shadow: 0 0 10px #ffd700;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 360px;
+      margin-top: 15px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px 8px;
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+    }
+    .btn:active { transform: translateY(2px); }
+    .btn-shuffle { background: #e67e22; }
+    .btn-magic { background: #8e44ad; }
+    .btn-new { background: #e74c3c; }
+  </style>
+</head>
+<body>
+
+  <div class="lang-bar">
+    <button class="lang-btn active" onclick="setLang('uz')">O'ZB</button>
+    <button class="lang-btn" onclick="setLang('ru')">РУС</button>
+    <button class="lang-btn" onclick="setLang('en')">ENG</button>
+  </div>
+
+  <div class="stats-bar">
+    <div>⭐ <span id="level">1</span></div>
+    <div>🏆 <span id="score">0</span></div>
+    <div>🪙 <span id="coins">20</span></div>
+  </div>
+
+  <div class="status-text" id="status">O'yinni boshlang!</div>
+
+  <div class="board" id="board"></div>
+
+  <div class="controls">
+    <button class="btn btn-shuffle" id="btn-shuffle" onclick="shuffleBoard()">🔀 Aralashtir</button>
+    <button class="btn btn-magic" id="btn-magic" onclick="useMagic()">✨ Sehr (10🪙)</button>
+    <button class="btn btn-new" id="btn-new" onclick="newGame()">🔄 Yangi</button>
+  </div>
+
+  <script>
+    const ADMOB_APP_ID = "ca-app-pub-1275271216332471~8126283781";
+    const ADMOB_INTERSTITIAL_ID = "ca-app-pub-1275271216332471/2280941065";
+
+    const items = ['🌿', '🌱', '🍀', '🍃'];
+    const size = 5;
+    let grid = [];
+    let selected = null;
+    let score = 0;
+    let level = 1;
+    let coins = 20;
+    let currentLang = 'uz';
+
+    const dict = {
+      uz: {
+        start: "3 ta bir xil bargni birlashtiring!",
+        matched: "🎉 Ajoyib! +10 ochko",
+        shuffled: "🔀 Doska aralashtirildi!",
+        magic: "✨ Sehr ishlatildi!",
+        noCoins: "🪙 Tanga yetarli emas!",
+        newGame: "🔄 Yangi o'yin boshlandi!",
+        btnShuffle: "🔀 Aralashtir",
+        btnMagic: "✨ Sehr (10🪙)",
+        btnNew: "🔄 Yangi"
+      },
+      ru: {
+        start: "Соберите 3 одинаковых листа!",
+        matched: "🎉 Отлично! +10 очков",
+        shuffled: "🔀 Доска перемешана!",
+        magic: "✨ Магия использована!",
+        noCoins: "🪙 Недостаточно монет!",
+        newGame: "🔄 Новая игра началась!",
+        btnShuffle: "🔀 Мешать",
+        btnMagic: "✨ Магия (10🪙)",
+        btnNew: "🔄 Заново"
+      },
+      en: {
+        start: "Match 3 identical leaves!",
+        matched: "🎉 Awesome! +10 points",
+        shuffled: "🔀 Board shuffled!",
+        magic: "✨ Magic used!",
+        noCoins: "🪙 Not enough coins!",
+        newGame: "🔄 New game started!",
+        btnShuffle: "🔀 Shuffle",
+        btnMagic: "✨ Magic (10🪙)",
+        btnNew: "🔄 New"
+      }
+    };
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('btn-shuffle').innerText = dict[lang].btnShuffle;
+      document.getElementById('btn-magic').innerText = dict[lang].btnMagic;
+      document.getElementById('btn-new').innerText = dict[lang].btnNew;
+      document.getElementById('status').innerText = dict[lang].start;
+    }
+
+    function showInterstitialAd() {
+      // HTML-to-APK / Android WebView interfeysi uchun AdMob chaqiruvi
+      if (window.Android && typeof window.Android.showInterstitial === 'function') {
+        window.Android.showInterstitial(ADMOB_INTERSTITIAL_ID);
+      } else if (window.admob && window.admob.interstitial) {
+        window.admob.interstitial.load({ id: ADMOB_INTERSTITIAL_ID }).then(() => window.admob.interstitial.show());
+      }
+    }
+
+    function initBoard() {
+      grid = [];
+      for (let i = 0; i < size * size; i++) {
+        grid.push(items[Math.floor(Math.random() * items.length)]);
+      }
+      while (findMatches().length > 0) {
+        for (let i = 0; i < size * size; i++) {
+          grid[i] = items[Math.floor(Math.random() * items.length)];
+        }
+      }
+      render();
+    }
+
+    function render() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      grid.forEach((item, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (selected === idx ? ' selected' : '');
+        cell.innerText = item;
+        cell.onclick = () => onCellClick(idx);
+        boardEl.appendChild(cell);
+      });
+      document.getElementById('score').innerText = score;
+      document.getElementById('level').innerText = level;
+      document.getElementById('coins').innerText = coins;
+    }
+
+    function onCellClick(idx) {
+      if (selected === null) {
+        selected = idx;
+        render();
+        return;
+      }
+      if (selected === idx) {
+        selected = null;
+        render();
+        return;
+      }
+      const r1 = Math.floor(selected / size), c1 = selected % size;
+      const r2 = Math.floor(idx / size), c2 = idx % size;
+      if (Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1) {
+        [grid[selected], grid[idx]] = [grid[idx], grid[selected]];
+        const matches = findMatches();
+        if (matches.length > 0) {
+          selected = null;
+          processMatches(matches);
+        } else {
+          [grid[selected], grid[idx]] = [grid[idx], grid[selected]];
+          selected = idx;
+          render();
+        }
+      } else {
+        selected = idx;
+        render();
+      }
+    }
+
+    function findMatches() {
+      let matched = new Set();
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size - 2; c++) {
+          let i = r * size + c;
+          if (grid[i] && grid[i] === grid[i+1] && grid[i] === grid[i+2]) {
+            matched.add(i); matched.add(i+1); matched.add(i+2);
+          }
+        }
+      }
+      for (let c = 0; c < size; c++) {
+        for (let r = 0; r < size - 2; r++) {
+          let i = r * size + c;
+          if (grid[i] && grid[i] === grid[i+size] && grid[i] === grid[i+2*size]) {
+            matched.add(i); matched.add(i+size); matched.add(i+2*size);
+          }
+        }
+      }
+      return Array.from(matched);
+    }
+
+    function processMatches(matches) {
+      score += matches.length * 10;
+      coins += 2;
+      if (score >= level * 100) {
+        level++;
+        showInterstitialAd();
+      }
+      document.getElementById('status').innerText = dict[currentLang].matched;
+      matches.forEach(idx => {
+        grid[idx] = items[Math.floor(Math.random() * items.length)];
+      });
+      render();
+      setTimeout(() => {
+        const nextMatches = findMatches();
+        if (nextMatches.length > 0) processMatches(nextMatches);
+      }, 300);
+    }
+
+    function shuffleBoard() {
+      grid.sort(() => Math.random() - 0.5);
+      selected = null;
+      document.getElementById('status').innerText = dict[currentLang].shuffled;
+      render();
+    }
+
+    function useMagic() {
+      if (coins < 10) {
+        document.getElementById('status').innerText = dict[currentLang].noCoins;
+        return;
+      }
+      coins -= 10;
+      const targetItem = items[Math.floor(Math.random() * items.length)];
+      for (let i = 0; i < 4; i++) {
+        const randIdx = Math.floor(Math.random() * grid.length);
+        grid[randIdx] = targetItem;
+      }
+      document.getElementById('status').innerText = dict[currentLang].magic;
+      render();
+      const matches = findMatches();
+      if (matches.length > 0) setTimeout(() => processMatches(matches), 300);
+    }
+
+    function newGame() {
+      score = 0;
+      level = 1;
+      coins = 20;
